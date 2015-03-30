@@ -1,0 +1,23 @@
+html, body {
+    height: 100%;
+    margin: 0;
+}
+#map-canvas{
+    height: 80%;
+    margin: 0;
+}
+#autocomplete {
+    width: 250px;
+    height: 25px;
+    margin: 0;
+    position: fixed;
+    z-index: 111111111;
+    top: 10px;
+    left: 75px;
+}
+#elevation_chart{
+    height: 20%;
+    position: fixed;
+    width: 100%;
+    bottom: 20px;
+}
