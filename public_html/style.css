@@ -3,7 +3,7 @@ html, body {
     margin: 0;
 }
 #map-canvas{
-    height: 80%;
+    height: 100%;
     margin: 0;
 }
 #autocomplete {
@@ -17,7 +17,9 @@ html, body {
 }
 #elevation_chart{
     height: 20%;
+    min-height: 150px;
     position: fixed;
     width: 100%;
-    bottom: 20px;
+    bottom: 0px;
+    display: none;
 }

@@ -15,20 +15,28 @@
         <!--<script src="https://maps.googleapis.com/maps/api/js?libraries=places"></script>-->
         <script src="https://www.google.com/jsapi"></script>
         <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&signed_in=true&libraries=places&sensor=true"></script>
-
-
         <style>
 
         </style>
-        <!--<script src="js.js" type="text/javascript"></script>-->
-        <!--<script src="al2.js" type="text/javascript"></script>-->
-        <!--<script src="elev1.js" type="text/javascript"></script>-->
-
-        <script src="js1.js" type="text/javascript"></script>
+        <script src="js.js" type="text/javascript"></script>
 
 
     </head>
     <body>
+        <!--temp-->
+        <ul class="list-unstyled" style="position: absolute; top: 50px; z-index: 11">
+            <li onclick="deleteMarkers()">
+                <button class="btn btn-default">
+                    <span class="glyphicon glyphicon-map-marker text-uppercase" ></span>
+                    <span class="glyphicon text-danger   glyphicon-remove "></span> <span>Delete All</span>
+                </button>
+            </li>
+            <li>
+
+            </li>
+        </ul>
+        <!-- //temp-->
+
         <input type="text" id="autocomplete">
         <div id="map-canvas"></div>
         <div id="elevation_chart"></div>

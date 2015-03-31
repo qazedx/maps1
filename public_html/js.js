@@ -1,122 +1,215 @@
-
 var elevator;
 var map;
-var infowindow = new google.maps.InfoWindow();
-var denali = new google.maps.LatLng(63.3333333, -150.5);
-
+var chart;
+var polyline;
+var path = [];
+var markers = [];
+// Load the Visualization API and the columnchart package.
+google.load('visualization', '1', {packages: ['columnchart']});
 function initialize() {
     var mapOptions = {
-        zoom: 8,
-        center: denali,
+        zoom: 14,
+        center: new google.maps.LatLng(36.578581, -118.291994),
         mapTypeId: 'terrain'
     }
-    map = new google.maps.Map(document.getElementById('map'), mapOptions);
-
-    // Create an ElevationService
-    elevator = new google.maps.ElevationService();
-
-    // Add a listener for the click event and call getElevation on that location
-    google.maps.event.addListener(map, 'click', getElevation);
-}
-function ini() {
-
-    var mapOptions = {
-        center: new google.maps.LatLng(37.7831, -122.4039),
-//        center: denali,
-//        mapTypeId: google.maps.MapTypeId.ROADMAP
-        mapTypeId: 'terrain',
-        zoom: 8
-    };
     map = new google.maps.Map(document.getElementById('map-canvas'), mapOptions);
-
-//    var markerOptions = {
-//        position: new google.maps.LatLng(37.7831, -122.4039),
-//        map: map
-//    };
-//    var marker = new google.maps.Marker(markerOptions);
-//    marker.setMap(map);
-
-//    var infoWindowOptions = {
-//        content: 'Moscone Is Here!'
-//    };
-//    var acOptions = {
-//        types: ['establishment']
-//    };
-//    var autocomplete = new google.maps.places.Autocomplete(document.getElementById('autocomplete'), acOptions);
-//    autocomplete.bindTo('bounds', map);
-////    var infoWindow = new google.maps.InfoWindow();
-////    var marker = new google.maps.Marker({
-////        map: map
-////    });
-//
-////    var infoWindow = new google.maps.InfoWindow(infoWindowOptions);
-////    google.maps.event.addListener(marker, 'click', function (e) {
-////
-////        infoWindow.open(map, marker);
-////
-////    });
-//
-//    //autocomplete
-//
-//    google.maps.event.addListener(autocomplete, 'place_changed', function () {
-//        infoWindow.close();
-//        var place = autocomplete.getPlace();
-//        if (place.geometry.viewport) {
-//            map.fitBounds(place.geometry.viewport);
-//        } else {
-//            map.setCenter(place.geometry.location);
-//            map.setZoom(17);
-//        }
-//        marker.setPosition(place.geometry.location);
-//        infoWindow.setContent('<div><strong>' + place.name + '</strong><br>');
-//        infoWindow.open(map, marker);
-//        google.maps.event.addListener(marker, 'click', function (e) {
-//
-//            infoWindow.open(map, marker);
-//
-//        });
-//    });
-//
-
-// Create an ElevationService
-    elevator = new google.maps.ElevationService();
-
-    // Add a listener for the click event and call getElevation on that location
-    google.maps.event.addListener(map - canvas, 'click', getElevation);
-}
-
-
-function getElevation(event) {
-
-    var locations = [];
-
-    // Retrieve the clicked location and push it on the array
-    var clickedLocation = event.latLng;
-    locations.push(clickedLocation);
-
-    // Create a LocationElevationRequest object using the array's one value
-    var positionalRequest = {
-        'locations': locations
+    // Try HTML5 geolocation
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function (position) {
+            var pos = new google.maps.LatLng(position.coords.latitude,
+                    position.coords.longitude);
+//            var infowindow = new google.maps.InfoWindow({
+//                map: map,
+//                position: pos,
+//                content: 'Location found using HTML5.'
+//            });
+            map.setCenter(pos);
+        }, function () {
+            handleNoGeolocation(true);
+        });
+    } else {
+        // Browser doesn't support Geolocation
+        handleNoGeolocation(false);
     }
-
-    // Initiate the location request
-    elevator.getElevationForLocations(positionalRequest, function (results, status) {
-        if (status == google.maps.ElevationStatus.OK) {
-
-            // Retrieve the first result
-            if (results[0]) {
-
-                // Open an info window indicating the elevation at the clicked position
-                infowindow.setContent('The elevation at this point <br>is ' + results[0].elevation + ' meters.');
-                infowindow.setPosition(clickedLocation);
-                infowindow.open(map);
-            } else {
-                alert('No results found');
-            }
-        } else {
-            alert('Elevation service failed due to: ' + status);
-        }
+    // Create an ElevationService.
+    elevator = new google.maps.ElevationService();
+    google.maps.event.addListener(map, 'click', function (e) {
+        placeMarker(e.latLng, map);
     });
 }
-google.maps.event.addDomListener(window, 'load', ini);
-//google.maps.event.addDomListener(window, 'load', initialize);
+
+function placeMarker(position, map) {
+    console.log(markers.length)
+    console.log(position)
+    if (markers.length < 2) {
+        console.log('position')
+        if (markers.length == 0) {
+            var icon = {
+                path: google.maps.SymbolPath.CIRCLE,
+                scale: 10
+            }
+            var title = 'Tower';
+        } else {
+            icon = '';
+            title = 'Receiver'
+        }
+        var marker = new google.maps.Marker({
+            position: position,
+            map: map,
+            draggable: true,
+            icon: icon,
+            title: title,
+        });
+        markers.push(marker)
+//            markerOpt(marker)
+        // pan to last point
+//            map.panTo(path[i]);
+        // Draw the path, using the Visualization API and the Elevation service.
+
+        drawPath();
+    } else {
+        return;
+    }
+
+    google.maps.event.addListener(marker, 'dragstart', function (e) {
+        dragMarker(marker);
+    });
+    google.maps.event.addListener(marker, 'click', function () {
+        markerOpt(marker);
+//        infowindow.open(marker.get('map'), marker);
+    });
+}
+function dragMarker(marker) {
+    polyline.setMap(null);
+
+    google.maps.event.addListener(marker, 'dragend', function (e) {
+        marker.position = e.latLng;
+        drawPath(path)
+    });
+}
+
+function markerOpt(marker) {
+
+    var custAltitude = '<div class="form-group">\n\
+<label for="marker-altitude">Altitude</label>\n\
+<input type="number" class="form-control" id="marker-altitude" placeholder="0.00">\n\
+</div>';
+    var removeBtn = '<a class="text-uppercase btn btn-sm btn-default btn-block" onclick = "markerRemove(\'' + marker.title + '\')"><span  class="glyphicon text-danger glyphicon-remove"></span> remove</a>';
+    var editBnt = '<button class="text-uppercase btn btn-sm btn-block btn-default  type="button" data-toggle="collapse" data-target="#collapseExample" aria-expanded="false" ><span class="glyphicon text-info glyphicon-map-marker"></span>edit</button >'
+    var editOpt = '<div class="form-group collapse" id="collapseExample">\n\
+<label for="marker-altitude">Lat</label>\n\
+<input type="number" class="form-control" id="marker-altitude"  value="' + marker.position.D + '">\n\
+<label for="marker-altitude">Long</label>\n\
+<input type="number" class="form-control" id="marker-altitude" value="' + marker.position.k + '">\n\
+</div'
+    var infowindow = new google.maps.InfoWindow({
+        content: '<label class="text-center btn-block">' + marker.title + '</label>' + custAltitude + editBnt + editOpt,
+    });
+    console.log(marker.position)
+    infowindow.open(marker.get('map'), marker);
+}
+
+function drawPath() {
+
+    if (markers.length < 2) {
+        return;
+    }
+// Create a new chart in the elevation_chart DIV.
+    chart = new google.visualization.ColumnChart(document.getElementById('elevation_chart'));
+    var path = [markers[0].position, markers[1].position]
+    // Create a PathElevationRequest object using this array.
+    // Ask for 256 samples along that path.
+    var pathRequest = {
+        'path': path,
+        'samples': 256
+    }
+
+// Initiate the path request.
+    elevator.getElevationAlongPath(pathRequest, plotElevation);
+}
+
+// Takes an array of ElevationResult objects, draws the path on the map
+// and plots the elevation profile on a Visualization API ColumnChart.
+function plotElevation(results, status) {
+    if (status != google.maps.ElevationStatus.OK) {
+        return;
+    }
+
+    var elevations = results;
+    // Extract the elevation samples from the returned results
+    // and store them in an array of LatLngs.
+    var elevationPath = [];
+    for (var i = 0; i < results.length; i++) {
+        elevationPath.push(elevations[i].location);
+    }
+
+// Display a polyline of the elevation path.
+    var pathOptions = {
+        path: elevationPath,
+        strokeColor: '#000',
+        opacity: 0.1,
+        map: map
+    }
+    if (polyline != null) {
+        polyline.setMap(null);
+    }
+    polyline = new google.maps.Polyline(pathOptions);
+    // Extract the data from which to populate the chart.
+    // Because the samples are equidistant, the 'Sample'
+    // column here does double duty as distance along the
+    // X axis.
+    var data = new google.visualization.DataTable();
+    data.addColumn('string', 'Sample');
+    data.addColumn('number', 'Elevation');
+    for (var i = 0; i < results.length; i++) {
+        data.addRow(['', elevations[i].elevation]);
+    }
+    console.log(data)
+// Draw the chart using the data within its DIV.
+    document.getElementById('elevation_chart').style.display = 'block';
+    chart.draw(data, {
+        height: 20 + '%',
+        legend: 'none',
+        titleY: 'Elevation (m)'
+    });
+}
+
+
+// On no Geolocation
+function handleNoGeolocation(errorFlag) {
+    if (errorFlag) {
+        var content = 'Error: The Geolocation service failed.';
+    } else {
+        var content = 'Error: Your browser doesn\'t support geolocation.';
+    }
+
+    var options = {
+        map: map,
+        position: new google.maps.LatLng(60, 105),
+        content: content
+    };
+    var infowindow = new google.maps.InfoWindow(options);
+    map.setCenter(options.position);
+}
+
+// Sets the map on all markers in the array.
+function setAllMap(map) {
+    for (var i = 0; i < markers.length; i++) {
+        markers[i].setMap(map);
+    }
+}
+// Removes the markers from the map, but keeps them in the array.
+function clearMarkers() {
+    setAllMap(null);
+    polyline.setMap(null);
+    document.getElementById('elevation_chart').style.display = 'none';
+}
+//// Shows any markers currently in the array.
+//// Deletes all markers in the array by removing references to them.
+function deleteMarkers() {
+    clearMarkers();
+    markers = [];
+}
+
+google.maps.event.addDomListener(window, 'load', initialize);
+
