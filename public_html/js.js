@@ -24,6 +24,8 @@ function initialize() {
 //                content: 'Location found using HTML5.'
 //            });
             map.setCenter(pos);
+            jQuery('#transmiter-marker-lat,#receiver-marker-lat').attr('value', position.coords.latitude);
+            jQuery('#transmiter-marker-lng,#receiver-marker-lng').attr('value', position.coords.longitude);
         }, function () {
             handleNoGeolocation(true);
         });
@@ -33,63 +35,111 @@ function initialize() {
     }
     // Create an ElevationService.
     elevator = new google.maps.ElevationService();
-    google.maps.event.addListener(map, 'click', function (e) {
-        placeMarker(e.latLng, map);
-    });
-}
-
-function placeMarker(position, map) {
-    console.log(markers.length)
-    console.log(position)
-    if (markers.length < 2) {
-        console.log('position')
-        if (markers.length == 0) {
-            var icon = {
-                path: google.maps.SymbolPath.CIRCLE,
-                scale: 10
-            }
-            var title = 'Tower';
+    google.maps.event.addListener(map, '\
+click', function (e) {
+        //console.log(e.latLng)
+        if (markers.length == 0 || markers[0].title == 'receiver') {
+            var title = 'transmiter';
         } else {
-            icon = '';
-            title = 'Receiver'
+            title = 'receiver';
         }
-        var marker = new google.maps.Marker({
-            position: position,
-            map: map,
-            draggable: true,
-            icon: icon,
-            title: title,
-        });
-        markers.push(marker)
-//            markerOpt(marker)
-        // pan to last point
-//            map.panTo(path[i]);
-        // Draw the path, using the Visualization API and the Elevation service.
+        handleMarker(e.latLng, title, 'add');
+    });
 
-        drawPath();
+}
+function formSubmit(title) {
+    var action = 'add';
+    if ($('#' + title + '-panel').hasClass('edit')) {
+        action = 'edit';
+    }
+    var markerLat = $('input#' + title + '-marker-lat').val();
+    var markerLng = $('input#' + title + '-marker-lng').val();
+    var position = new google.maps.LatLng(markerLat, markerLng);
+
+    handleMarker(position, title, action);
+}
+function editMarker(position, title) {
+    if (markers[0].title == title) {
+//            console.log('1');
+        markers[0].setPosition(position);
+//            console.log('1.1');
+    } else if (markers[1].title == title) {
+        markers[1].setPosition(position);
     } else {
+        console.log('err');
+    }
+    map.panTo(position);
+    drawPath();
+}
+function handleMarker(position, title, action) {
+    if (action == 'edit') {
+        editMarker(position, title)
         return;
+    } else {
+        if (markers.length < 2) {
+            var col;
+            if (markers.length > 0) {
+                col = 'hide';
+            } else {
+
+                col = 'toggle';
+            }
+            if (title == 'transmiter') {
+                var icon = {
+                    path: google.maps.SymbolPath.CIRCLE,
+                    scale: 10
+                }
+                $('#receiverCollapsible').collapse(col);
+            } else {
+                icon = '';
+                $('#transmiterCollapsible').collapse(col);
+            }
+            var marker = new google.maps.Marker({
+                position: position,
+                map: map,
+                draggable: true,
+                icon: icon,
+                title: title,
+            });
+            $('#' + title + '-panel').addClass('edit');
+
+            $('#' + title + 'Collapsible').collapse('hide');
+            markers.push(marker);
+        } else {
+            return;
+        }
     }
 
-    google.maps.event.addListener(marker, 'dragstart', function (e) {
-        dragMarker(marker);
-    });
-    google.maps.event.addListener(marker, 'click', function () {
-        markerOpt(marker);
-//        infowindow.open(marker.get('map'), marker);
-    });
+
+    map.panTo(position);
+
+//    google.maps.event.addListener(marker, 'dragstart', function (e) {
+//        console.log(e);
+////        dragMarker(marker);
+//
+//    });
+//    google.maps.event.addListener(marker, 'click', function () {
+//        markerOpt(marker);
+////        infowindow.open(marker.get('map'), marker);
+//    });
+    dragMarker(marker);
+    drawPath();
 }
+
 function dragMarker(marker) {
-    polyline.setMap(null);
 
     google.maps.event.addListener(marker, 'dragend', function (e) {
-        marker.position = e.latLng;
-        drawPath(path)
+        if (markers.length == 2) {
+            polyline.setMap(null);
+        }
+        jQuery('#' + marker.title + '-marker-lat').attr('value', marker.position.k);
+        jQuery('#' + marker.title + '-marker-lng').attr('value', marker.position.D)
+        drawPath()
     });
 }
 
 function markerOpt(marker) {
-
+    console.log('ll')
     var custAltitude = '<div class="form-group">\n\
 <label for="marker-altitude">Altitude</label>\n\
 <input type="number" class="form-control" id="marker-altitude" placeholder="0.00">\n\
@@ -105,15 +155,39 @@ function markerOpt(marker) {
     var infowindow = new google.maps.InfoWindow({
         content: '<label class="text-center btn-block">' + marker.title + '</label>' + custAltitude + editBnt + editOpt,
     });
-    console.log(marker.position)
+//    console.log(marker.position)
     infowindow.open(marker.get('map'), marker);
 }
 
+function MarkerInfo(marker) {
+    var markerPlaceholder = $('#' + marker.title + '-placeholder')
+    console.log();
+    var custAltitude = '<div class="form-group">\n\
+<label for="' + marker.title + '-marker-altitude">Altitude</label>\n\
+<input type="number" class="form-control" id="' + marker.title + '-marker-altitude" placeholder="0.00">\n\
+</div>';
+    var removeBtn = '<a class="text-uppercase btn btn-sm btn-default btn-block" onclick = "markerRemove(\'' + marker.title + '\')"><span  class="glyphicon text-danger glyphicon-remove"></span> remove</a>';
+    var editBnt = '<button class="text-uppercase btn btn-sm btn-block btn-default  type="button" data-toggle="collapse" data-target="#collapse-' + marker.title + '" aria-expanded="false" ><span class="glyphicon text-info glyphicon-map-marker"></span>edit</button >'
+    var editOpt = '<div class="form-group collapse" id="collapse-' + marker.title + '">\n\
+<label for="' + marker.title + '-marker-lat">Lat</label>\n\
+<input type="number" class="form-control" id="' + marker.title + '-marker-lat"  value="' + marker.position.D + '">\n\
+<label for="' + marker.title + '-marker-long">Long</label>\n\
+<input type="number" class="form-control" id="' + marker.title + '-marker-long" value="' + marker.position.k + '">\n\
+</div'
+    var editForm = '<label class="text-center btn-block">'
+            + marker.title
+            + '</label>'
+            + custAltitude
+            + editBnt
+            + editOpt;
+    markerPlaceholder.html(editForm);
+}
 function drawPath() {
-
+//    console.log(markers);
     if (markers.length < 2) {
         return;
     }
+
 // Create a new chart in the elevation_chart DIV.
     chart = new google.visualization.ColumnChart(document.getElementById('elevation_chart'));
     var path = [markers[0].position, markers[1].position]
@@ -164,16 +238,22 @@ function plotElevation(results, status) {
     for (var i = 0; i < results.length; i++) {
         data.addRow(['', elevations[i].elevation]);
     }
-    console.log(data)
+//    console.log(data)
+    if (!$('#elevation_chart_wrapper').hasClass('in')) {
+        $('#elevation_chart_wrapper').collapse('show');
+    }
+    if ($('.elevation-chart-toggle').hasClass('hidden')) {
+        $('.elevation-chart-toggle').removeClass('hidden')
+    }
 // Draw the chart using the data within its DIV.
+
     document.getElementById('elevation_chart').style.display = 'block';
     chart.draw(data, {
-        height: 20 + '%',
+        height: 150,
         legend: 'none',
         titleY: 'Elevation (m)'
     });
 }
-
 
 // On no Geolocation
 function handleNoGeolocation(errorFlag) {
@@ -190,6 +270,7 @@ function handleNoGeolocation(errorFlag) {
     };
     var infowindow = new google.maps.InfoWindow(options);
     map.setCenter(options.position);
+
 }
 
 // Sets the map on all markers in the array.
@@ -203,6 +284,7 @@ function clearMarkers() {
     setAllMap(null);
     polyline.setMap(null);
     document.getElementById('elevation_chart').style.display = 'none';
+    $('#receiver-placeholder,#transmiter-placeholder').html('');
 }
 //// Shows any markers currently in the array.
 //// Deletes all markers in the array by removing references to them.

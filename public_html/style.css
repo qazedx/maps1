@@ -1,25 +1,88 @@
-html, body {
+html, body ,
+#map-canvas,
+.main-content{
     height: 100%;
     margin: 0;
+    max-height: 100%;
 }
-#map-canvas{
-    height: 100%;
-    margin: 0;
+.main-content{
+    padding-top: 50px;
+    padding-bottom: 0;
+}
+.main-content.padding-chart{
+    padding-bottom: 150px;
 }
 #autocomplete {
-    width: 250px;
-    height: 25px;
-    margin: 0;
-    position: fixed;
+    /*    width: 250px;
+        height: 25px;
+        margin: 0;*/
+    /*position: fixed;*/
     z-index: 111111111;
-    top: 10px;
-    left: 75px;
+    /*    top: 10px;
+        left: 75px;*/
+}
+#elevation_chart_wrapper{
+    /*height: 150px;*/
 }
 #elevation_chart{
-    height: 20%;
+    /*height: 20%;*/
     min-height: 150px;
-    position: fixed;
+    /*position: fixed;*/
     width: 100%;
-    bottom: 0px;
+    /*bottom: 0px;*/
     display: none;
+}
+.elevation-chart-toggle.collapsed span.glyphicon:before{
+    content: "\e113";
+}
+.elevation-chart-toggle span.glyphicon:before{
+    content: "\e114";
+}
+.transmiter-receiver .panel-default .panel-heading a{
+    text-decoration: none;
+}
+.transmiter-receiver .panel-default .panel-heading a >span{
+    display: none;
+}
+.transmiter-receiver .panel-default.edit .panel-heading a >span{
+    display: initial;
+}
+.transmiter-receiver .panel-default.edit label:before{
+    content: "\e065";
+    position: relative;
+    top: 1px;
+    display: inline-block;
+    font-family: 'Glyphicons Halflings';
+    font-style: normal;
+    font-weight: 400;
+    line-height: 1;
+    -webkit-font-smoothing: antialiased;
+    margin-top: 5px;
+    margin-right: 3px;
+}
+/*temp bs override*/
+
+.navbar{
+    margin-bottom: 0;
+}
+/*.navbar .collapse,
+.navbar .collapsing{
+    position: absolute;
+    z-index: 11;
+    height: auto;
+    width: auto;
+        background-color: #fff;
+        padding: 10px;
+
+}*/
+.panel.panel-default{
+    min-width: 200px
+}
+.transmiter-receiver .panel-default .panel-heading{
+    padding: 0;
+
+}
+.transmiter-receiver .panel-default .panel-heading a{
+    padding: 10px 15px;
+    display: block;
 }
