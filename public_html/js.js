@@ -2,13 +2,16 @@ var elevator;
 var map;
 var chart;
 var polyline;
+var elevTransmiter;
+var elevReceiver;
 var path = [];
 var markers = [];
 // Load the Visualization API and the columnchart package.
-google.load('visualization', '1', {packages: ['columnchart']});
+google.load("visualization", "1", {packages: ["corechart"]});
+
 function initialize() {
     var mapOptions = {
-        zoom: 14,
+        zoom: 12,
         center: new google.maps.LatLng(36.578581, -118.291994),
         mapTypeId: 'terrain'
     }
@@ -24,8 +27,19 @@ function initialize() {
 //                content: 'Location found using HTML5.'
 //            });
             map.setCenter(pos);
+            jQuery('#transmiter-marker-alt').attr('value', 20);
+            jQuery('#receiver-marker-alt').attr('value', 20);
             jQuery('#transmiter-marker-lat,#receiver-marker-lat').attr('value', position.coords.latitude);
             jQuery('#transmiter-marker-lng,#receiver-marker-lng').attr('value', position.coords.longitude);
+            //dev
+//            jQuery('#transmiter-marker-alt').attr('value', 86);
+//            jQuery('#transmiter-marker-lat').attr('value', position.coords.latitude);
+//            jQuery('#transmiter-marker-lng').attr('value', position.coords.longitude);
+//            jQuery('#receiver-marker-alt').attr('value', 20);
+//            jQuery('#receiver-marker-lat').attr('value', position.coords.latitude + 0.1);
+//            jQuery('#receiver-marker-lng').attr('value', position.coords.longitude + 0.1);
+//            formSubmit('transmiter');
+//            formSubmit('receiver')
         }, function () {
             handleNoGeolocation(true);
         });
@@ -37,7 +51,6 @@ function initialize() {
     elevator = new google.maps.ElevationService();
     google.maps.event.addListener(map, '\
 click', function (e) {
-        //console.log(e.latLng)
         if (markers.length == 0 || markers[0].title == 'receiver') {
             var title = 'transmiter';
         } else {
@@ -52,17 +65,22 @@ function formSubmit(title) {
     if ($('#' + title + '-panel').hasClass('edit')) {
         action = 'edit';
     }
+
+    var markerAlt = $('input#' + title + '-marker-alt').val();
     var markerLat = $('input#' + title + '-marker-lat').val();
     var markerLng = $('input#' + title + '-marker-lng').val();
     var position = new google.maps.LatLng(markerLat, markerLng);
 
+    if (title == 'transmiter') {
+        elevTransmiter = markerAlt;
+    } else {
+        elevReceiver = markerAlt;
+    }
     handleMarker(position, title, action);
 }
 function editMarker(position, title) {
     if (markers[0].title == title) {
-//            console.log('1');
         markers[0].setPosition(position);
-//            console.log('1.1');
     } else if (markers[1].title == title) {
         markers[1].setPosition(position);
     } else {
@@ -110,18 +128,7 @@ function handleMarker(position, title, action) {
         }
     }
 
-
     map.panTo(position);
-
-//    google.maps.event.addListener(marker, 'dragstart', function (e) {
-//        console.log(e);
-////        dragMarker(marker);
-//
-//    });
-//    google.maps.event.addListener(marker, 'click', function () {
-//        markerOpt(marker);
-////        infowindow.open(marker.get('map'), marker);
-//    });
     dragMarker(marker);
     drawPath();
 }
@@ -183,13 +190,13 @@ function MarkerInfo(marker) {
     markerPlaceholder.html(editForm);
 }
 function drawPath() {
-//    console.log(markers);
+
     if (markers.length < 2) {
         return;
     }
 
 // Create a new chart in the elevation_chart DIV.
-    chart = new google.visualization.ColumnChart(document.getElementById('elevation_chart'));
+//    chart = new google.visualization.ColumnChart(document.getElementById('elevation_chart'));
     var path = [markers[0].position, markers[1].position]
     // Create a PathElevationRequest object using this array.
     // Ask for 256 samples along that path.
@@ -201,7 +208,7 @@ function drawPath() {
 // Initiate the path request.
     elevator.getElevationAlongPath(pathRequest, plotElevation);
 }
-
+//google.load('visualization', '1', {packages: ['corechart', 'line']});
 // Takes an array of ElevationResult objects, draws the path on the map
 // and plots the elevation profile on a Visualization API ColumnChart.
 function plotElevation(results, status) {
@@ -233,26 +240,50 @@ function plotElevation(results, status) {
     // column here does double duty as distance along the
     // X axis.
     var data = new google.visualization.DataTable();
-    data.addColumn('string', 'Sample');
+    data.addColumn('string', 'S');
     data.addColumn('number', 'Elevation');
-    for (var i = 0; i < results.length; i++) {
-        data.addRow(['', elevations[i].elevation]);
+    data.addColumn('number', 'line');
+    data.addColumn('number', 'FlineTop');
+//    data.addColumn('number', 'FlineBot');
+    var pointCount = results.length;
+//    ghz
+    var frequency = 2.4;
+//    km
+    var distance = google.maps.geometry.spherical.computeDistanceBetween(markers[0].position, markers[1].position) * 0.001;
+    var radiusFresnel = 17.32 * Math.sqrt(distance / frequency * 4);
+    var elevTransmiterAbs = parseInt(elevTransmiter) + elevations[1].elevation;
+    var elevReceiverAbs = parseInt(elevReceiver) + elevations[(pointCount - 1)].elevation;
+    var incr = (elevReceiverAbs - elevTransmiterAbs) / (pointCount - 1);
+    var incrr = incr;
+    var Fline;
+    for (var i = 0; i < pointCount; i++) {
+//        Fline = Math.sqrt((1 - (Math.pow(i, 2) / (Math.pow(pointCount, 2)))) / Math.pow(radiusFresnel, 2));
+//        Fline = Fline + elevTransmiterAbs + incrr;
+//        console.log(Fline);
+        Fline = 0;
+        data.addRow(['', elevations[i].elevation, (elevTransmiterAbs + incrr), Fline]);
+        incrr = incrr + incr;
     }
-//    console.log(data)
+
     if (!$('#elevation_chart_wrapper').hasClass('in')) {
         $('#elevation_chart_wrapper').collapse('show');
     }
     if ($('.elevation-chart-toggle').hasClass('hidden')) {
-        $('.elevation-chart-toggle').removeClass('hidden')
+        $('.elevation-chart-toggle').removeClass('hidden');
     }
-// Draw the chart using the data within its DIV.
 
-    document.getElementById('elevation_chart').style.display = 'block';
-    chart.draw(data, {
+    var options = {
         height: 150,
         legend: 'none',
-        titleY: 'Elevation (m)'
-    });
+        titleY: 'Elevation (m)',
+        seriesType: "line",
+//        series: {4: {curveType: 'function'}},
+//        colors: ['#000', '#ddd'],
+    };
+    document.getElementById('elevation_chart').style.display = 'block';
+    var chart = new google.visualization.ComboChart(document.getElementById('elevation_chart'));
+    chart.draw(data, options);
+
 }
 
 // On no Geolocation
